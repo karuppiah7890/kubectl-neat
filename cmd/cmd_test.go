@@ -33,12 +33,15 @@ func TestRootCmd(t *testing.T) {
 	if err != nil {
 		t.Errorf("error readin test data file %s: %v", resourceDataJSONPath, err)
 	}
+	expectedColoredJSON := "\033[30;101m{\033[0m\n\033[91m    \"apiVersion\"\033[0m: \033[33m\"v1\",\033[0m"
+
 	resourceDataYAMLPath := "../test/fixtures/service1-raw.yaml"
 	resourceDataYAMLBytes, err := ioutil.ReadFile(resourceDataYAMLPath)
 	resourceDataYAML := string(resourceDataYAMLBytes)
 	if err != nil {
 		t.Errorf("error readin test data file %s: %v", resourceDataYAMLPath, err)
 	}
+	expectedColoredYAML := "\033[91mapiVersion\033[0m: \033[33mv1\033[0m"
 
 	testcases := []struct {
 		args        []string
@@ -59,10 +62,22 @@ func TestRootCmd(t *testing.T) {
 			expOut:      "apiVersion",
 		},
 		{
+			args:        []string{"-c"},
+			stdin:       resourceDataJSON,
+			assertError: assertErrorNil,
+			expOut:      expectedColoredJSON,
+		},
+		{
 			args:        []string{},
 			stdin:       resourceDataYAML,
 			assertError: assertErrorNil,
 			expOut:      "apiVersion",
+		},
+		{
+			args:        []string{"-c"},
+			stdin:       resourceDataYAML,
+			assertError: assertErrorNil,
+			expOut:      expectedColoredYAML,
 		},
 		{
 			args:        []string{"-f", "-"},
@@ -71,7 +86,21 @@ func TestRootCmd(t *testing.T) {
 			expOut:      "apiVersion",
 		},
 		{
+			args:        []string{"-c", "-f", "-"},
+			stdin:       resourceDataJSON,
+			assertError: assertErrorNil,
+			expOut:      expectedColoredJSON,
+		},
+		{
 			args:  []string{"-f", "/nogood"},
+			stdin: "",
+			assertError: func(err error) bool {
+				return fmt.Sprintf("%T", err) == "*os.PathError"
+			},
+			expOut: "",
+		},
+		{
+			args:  []string{"-c", "-f", "/nogood"},
 			stdin: "",
 			assertError: func(err error) bool {
 				return fmt.Sprintf("%T", err) == "*os.PathError"
@@ -85,10 +114,28 @@ func TestRootCmd(t *testing.T) {
 			expOut:      "apiVersion",
 		},
 		{
+			args:        []string{"-c", "-f", resourceDataJSONPath},
+			stdin:       "",
+			assertError: assertErrorNil,
+			expOut:      expectedColoredJSON,
+		},
+		{
 			args:        []string{"-f", resourceDataYAMLPath},
 			stdin:       "",
 			assertError: assertErrorNil,
 			expOut:      "apiVersion",
+		},
+		{
+			args:        []string{"-c", "-f", resourceDataYAMLPath},
+			stdin:       "",
+			assertError: assertErrorNil,
+			expOut:      expectedColoredYAML,
+		},
+		{
+			args:        []string{"-c", "-c", "-f", resourceDataYAMLPath},
+			stdin:       "",
+			assertError: assertErrorNil,
+			expOut:      expectedColoredYAML,
 		},
 	}
 
@@ -125,6 +172,11 @@ func TestRootCmd(t *testing.T) {
 
 func TestGetCmd(t *testing.T) {
 	kubectl = "../test/kubectl-stub"
+
+	expectedColoredJSON := "\033[30;101m{\033[0m\n\033[91m    \"apiVersion\"\033[0m: \033[33m\"v1\",\033[0m"
+
+	expectedColoredYAML := "\033[91mapiVersion\033[0m: \033[33mv1\033[0m"
+
 	testcases := []struct {
 		args        []string
 		assertError func(err error) bool
@@ -158,9 +210,21 @@ func TestGetCmd(t *testing.T) {
 			expErr:      "",
 		},
 		{
+			args:        []string{"pods", "mypod", "-c", "-o", "yaml"},
+			assertError: assertErrorNil,
+			expOut:      expectedColoredYAML,
+			expErr:      "",
+		},
+		{
 			args:        []string{"pods", "mypod", "-o", "json"},
 			assertError: assertErrorNil,
 			expOut:      "apiVersion",
+			expErr:      "",
+		},
+		{
+			args:        []string{"pods", "mypod", "-c", "-o", "json"},
+			assertError: assertErrorNil,
+			expOut:      expectedColoredJSON,
 			expErr:      "",
 		},
 	}
